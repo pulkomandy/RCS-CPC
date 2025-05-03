@@ -8,13 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_SIZE  6912
-#define SECTOR1   2048
-#define ATTRIB1    256
+#define MAX_SIZE  16384
+#define LINE_OFFSET 0x800
 
 unsigned char input_data[MAX_SIZE+1];
 unsigned char output_data[MAX_SIZE];
 size_t file_size;
+size_t screen_width;
 
 void convert(int decode_mode) {
     int sector;
@@ -23,26 +23,27 @@ void convert(int decode_mode) {
     int col;
     int i;
 
-    i = 0;
+    lin = 0;
+    col = 0;
+    row = 0;
 
     /* transform bitmap area */
-    for (sector=0; sector < file_size/SECTOR1; sector++) {
-        for (col=0; col < 32; col++) {
-            for (row=0; row < 8; row++) {
-                for (lin=0; lin < 8; lin++) {
-                    if (decode_mode) {
-                        output_data[(((((sector<<3)+lin)<<3)+row)<<5)+col] = input_data[i++];
-                    } else {
-                        output_data[i++] = input_data[(((((sector<<3)+lin)<<3)+row)<<5)+col];
-                    }
-                }
-            }
+    for (i = 0; i < MAX_SIZE; i++) {
+        if (decode_mode) {
+            output_data[lin] = input_data[i];
+        } else {
+            output_data[i] = input_data[lin];
         }
-    }
 
-    /* just copy attributes */
-    for (; i < file_size; i++) {
-        output_data[i]=input_data[i];
+        lin += LINE_OFFSET;
+        if (lin >= MAX_SIZE) {
+            col += screen_width;
+            if (col >= LINE_OFFSET) {
+                row++;
+                col = row;
+            }
+            lin = col;
+        }
     }
 }
 
@@ -56,7 +57,9 @@ int main(int argc, char *argv[]) {
     size_t bytes_read;
     int i;
 
-    printf("RCS: Reverse Computer Screen by Einar Saukas\n");
+    printf("RCS: Reverse Computer Screen by Einar Saukas - CPC version by PulkoMandy\n");
+
+    screen_width = 80;
 
     /* process command-line arguments */
     for (i = 1; i < argc; i++) {
@@ -64,6 +67,8 @@ int main(int argc, char *argv[]) {
             forced_mode = 1;
         } else if (!strcmp(argv[i], "-d")) {
             decode_mode = 1;
+        } else if (!strcmp(argv[i], "-w")) {
+            screen_width = strtol(argv[++i], NULL, 0);
         } else if (input_name == NULL) {
             input_name = argv[i];
         } else if (output_name == NULL) {
@@ -76,9 +81,10 @@ int main(int argc, char *argv[]) {
 
     /* validate command-line arguments */
     if (input_name == NULL) {
-         fprintf(stderr, "Usage: %s [-f] [-d] input [output]\n"
+         fprintf(stderr, "Usage: %s [-f] [-d] [-w n] input [output]\n"
                          "  -f      Force overwrite of output file\n"
-                         "  -d      Decode from RCS to SCR\n", argv[0]);
+                         "  -d      Decode from RCS to SCR\n"
+                         "  -w n    Screen width is n bytes (default is 80)\n", argv[0]);
          exit(1);
     }
     if (output_name == NULL) {
@@ -104,7 +110,7 @@ int main(int argc, char *argv[]) {
     fclose(ifp);
 
     /* generate output file */
-    if (file_size > 0 && file_size <= MAX_SIZE && (file_size%SECTOR1 == 0 || file_size%(SECTOR1+ATTRIB1) == 0)) {
+    if (file_size > 0 && file_size <= MAX_SIZE) {
         convert(decode_mode);
     } else {
         fprintf(stderr, "Error: Invalid input file %s\n", input_name);
@@ -125,7 +131,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* write output file */
-    if (fwrite(output_data, sizeof(char), file_size, ofp) != file_size) {
+    if (fwrite(output_data, sizeof(char), MAX_SIZE, ofp) != MAX_SIZE) {
          fprintf(stderr, "Error: Cannot write output file %s\n", output_name);
          exit(1);
     }
@@ -134,9 +140,7 @@ int main(int argc, char *argv[]) {
     fclose(ofp);
 
     /* done! */
-    printf("%scoded %s screen with%s attributes!\n", decode_mode ? "De" : "En",
-        file_size/SECTOR1 == 1 ? "1/3" : file_size/SECTOR1 == 2 ? "2/3" : "full",
-        file_size%SECTOR1 == 0 ? "out" : "");
+    printf("%scoded screen!\n", decode_mode ? "De" : "En");
 
     return 0;
 }
