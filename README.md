@@ -81,7 +81,7 @@ also not consecutive in the native format.
 
 ## Tech Stuff
 
-The following program helps visualize the regular ZX Spectrum screen ordering:
+The following program helps visualize the regular Amstrad CPC screen ordering:
 
 ```
     10 MODE 1
