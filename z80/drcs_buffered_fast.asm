@@ -1,10 +1,10 @@
 ; -----------------------------------------------------------------------------
-; RCS-CPC buffered decoder optimized by Madram
-; RCS-CPC decoder from buffer at 0x4000 to regular screen at 0x8000
+; RCS-CPC buffered decoder by Madram - Fast version with unrolled loop
+; RCS-CPC decoder from buffer at 0x4000 to regular screen
 ; -----------------------------------------------------------------------------
 ; Parameters:
 ; DE: source buffer address (RCS data) - Currently must be 0x4000
-; HL: destination screen address - Currently must be 0x8000
+; HL: destination screen address
 ; -----------------------------------------------------------------------------
 
 ; Value of CRTC R1 (80 for default screen size)
@@ -23,12 +23,57 @@ drcs_next_row:
 		add h
 		ld h,a
 
-		; This relies on HL = 8000 as bit 6 detects overflow into C000 space
-		; Adjust depending on desired value of HL:
-		; HL = 0000 or 8000: use bit 6 and JR Z
-		; HL = 4000 or C000: use bit 6 and JR NZ
-		BIT 6, a
-		JR Z, drcs_next_row
+		ld      a, (de)
+		inc     de
+		ld      (hl), a
+
+		ld a,8
+		add h
+		ld h,a
+
+		ld      a, (de)
+		inc     de
+		ld      (hl), a
+
+		ld a,8
+		add h
+		ld h,a
+
+		ld      a, (de)
+		inc     de
+		ld      (hl), a
+
+		ld a,8
+		add h
+		ld h,a
+
+		ld      a, (de)
+		inc     de
+		ld      (hl), a
+
+		ld a,8
+		add h
+		ld h,a
+
+		ld      a, (de)
+		inc     de
+		ld      (hl), a
+
+		ld a,8
+		add h
+		ld h,a
+
+		ld      a, (de)
+		inc     de
+		ld      (hl), a
+
+		ld a,8
+		add h
+		ld h,a
+
+		ld      a, (de)
+		inc     de
+		ld      (hl), a
 
 		LD BC, &C000 + r1 * 2
 		ADD HL,BC
